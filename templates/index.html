@@ -76,6 +76,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
     <script>
         // Get the completion flag from Flask template
         var alertMessage = {{ alertMessage | tojson }};
@@ -90,6 +91,69 @@
                 repeat_no_input.value = 1;
             }
         };
+
+        document.getElementById("add-item-form").onsubmit = (e) => {
+            e.preventDefault();
+            const formData = new FormData(document.getElementById("add-item-form"));
+            
+            fetch('/add', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("video_link").value = ""
+                document.getElementById("username_input").value = ""
+                document.getElementById("repeat_no").value = 1
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        };
+
+        function addAjaxFormEventListeners() {
+            document.querySelectorAll(".delete-item-button").forEach(button => {
+                button.onclick = (e) => {
+                    e.preventDefault();
+                    const row = button.closest('tr');
+                    const id = row.getAttribute('data-id');
+                    fetch('/delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ id })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Delete Success:', data);
+                        row.remove();
+                    })
+                    .catch(error => console.error('Error deleting item:', error));
+                };
+            });
+
+            document.querySelectorAll(".run-item-button").forEach(button => {
+                button.onclick = (e) => {
+                    e.preventDefault();
+                    const row = button.closest('tr');
+                    const id = row.getAttribute('data-id');
+                    fetch('/run', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ id })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Run Success:', data);
+                        // Optionally update the UI to show the item is being processed
+                    })
+                    .catch(error => console.error('Error running item:', error));
+                };
+            });
+        }
 
         function updateStatus() {
             fetch('/status')
@@ -119,13 +183,16 @@
                     `;
                     itemTable.appendChild(row);
                 });
+                addAjaxFormEventListeners();
             })
             .catch(error => console.error('Error fetching status:', error));
         }
 
-        // Call updateStatus() initially and then periodically
-        updateStatus();
-        setInterval(updateStatus, 2000);
+        // Call updateStatus() periodically
+        setInterval(() => {
+        updateStatus()
+       }, 2000);
+
 
         document.getElementById("run-all-btn").onclick = (e) => {
             e.preventDefault();

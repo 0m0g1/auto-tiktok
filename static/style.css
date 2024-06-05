@@ -93,19 +93,30 @@ p {
 }
 
 table {
+    background-color: #f4f4f4;
     width: 100%;
     border-collapse: collapse;
+    border: 1px solid #dddddd;
 }
 
 table th, table td {
     padding: 8px;
-    border: 1px solid #ddd;
+    border-left: 1px solid #dddddd;
+    border-right: 1px solid #dddddd;
     text-align: left;
 }
 
 /* Optional: Style the table header row */
 table th {
     background-color: #f2f2f2;
+}
+
+/* tbody tr:nth-child(even) {
+    background-color: #f4f4f4;
+} */
+
+table tbody:nth-child(2) tr:nth-child(odd) {
+    background-color: #dddddd;
 }
 
 .action-cell {

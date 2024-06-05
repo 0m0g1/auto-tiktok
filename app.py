@@ -1,12 +1,15 @@
 from flask import Flask, request, render_template, url_for, redirect, jsonify
-from main_script import main, run_all_items
+from flask_socketio import SocketIO, emit
+from main_script import main
 import threading
 from random import randint
+import time
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'
+socketio = SocketIO(app, async_mode='eventlet')
 
 listofitems = []
-temporarylistofitems = []
 
 def start_main_function(video_link, username_input, repeat_no, callback):
     def target():
@@ -15,12 +18,20 @@ def start_main_function(video_link, username_input, repeat_no, callback):
     thread = threading.Thread(target=target)
     thread.start()
 
-def start_run_all_function(callback):
-    def target():
-        result = run_all_items(listofitems)
-        callback(result)
-    thread = threading.Thread(target=target)
-    thread.start()
+
+def update_item_status(item):
+    # Update the status of the specific item
+    item_index = listofitems.index(item)
+    listofitems[item_index]["completed"] = True
+
+def run_all_items():
+    for item in listofitems:
+        completed = main(item["url"], item["username"], item["repeat"])
+        # Perform the status update in a separate thread
+        if completed:
+            update_thread = threading.Thread(target=update_item_status, args=(item,))
+            update_thread.start()
+    return True
 
 def generateUniqueID():
     id = randint(1000, 9999)
@@ -67,7 +78,8 @@ def addItem():
             listofitems.append(added_item)
         except Exception as e:
             result = f"An error occurred: {e}"
-    return redirect(url_for("index"))
+            return jsonify({"error": e})
+    return jsonify(listofitems)
 
 @app.route("/delete", methods=["POST"])
 def delete():
@@ -89,6 +101,7 @@ def run():
         def callback(result):
             item["completed"] = True
             item["result"] = result
+            socketio.emit('update_item', item)
 
         start_main_function(item["url"], item["username"], item["repeat"], callback)
         return redirect(url_for("index"))  # Redirect back to index after running the script
@@ -103,13 +116,7 @@ def run():
 @app.route("/run_all", methods=["POST"])
 def run_all():
     try:
-        temporarylistofitems = listofitems[:]
-        
-        def callback(result):
-            for item in listofitems:
-                item["completed"] = True
-        
-        start_run_all_function(callback)
+        run_all_items()
     except KeyError as e:
         result = f"Missing form field: {e}"
     except ValueError:
@@ -118,10 +125,9 @@ def run_all():
         result = f"An error occurred: {e}"
     return jsonify("running all")
 
-
 @app.route("/status")
 def get_status():
     return jsonify(listofitems)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app, debug=True)

@@ -245,6 +245,8 @@ def dashboard(driver, video_link,username_input):
 
 
 def main(video_link, username_input, repeat_number):
+    time.sleep(4)
+    return True
     chrome_options = Options()
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     chrome_options.add_experimental_option("prefs", {
@@ -306,8 +308,3 @@ def main(video_link, username_input, repeat_number):
             dashboard(driver, video_link, username_input)
             
         return True
-    
-def run_all_items(items):
-    for item in items:
-        main(item["url"], item["username"], item["repeat"])
-    return True
