@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Run Selenium Script</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arial&display=swap">
+    <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Calibri:wght@400;700&display=swap"> -->
+</head>
+<body>
+    <div id="form-wrapper">
+        <form id="add-item-form" action="/add" method="POST">
+            <ul>
+                <li>
+                    <label for="video_link">Video Link<span>*</span></label>
+                    <input type="text" id="video_link" name="video_link" required>
+                </li>
+                <li>
+                    <label for="username_input">Username<span>*</span></label>
+                    <input type="text" id="username_input" name="username_input" required>
+                </li>
+                <li>
+                    <label for="repeat_no">Number of Repeats<span>*</span></label>
+                    <input type="number" id="repeat_no" name="repeat_no" required min="1" value="1">
+                </li>
+            </ul>
+            <input type="submit" value="Add Item" class="submit-button">
+            <div class="break"></div>
+        </form>
+    </div>
+
+    {% if result %}
+        <p>{{ result }}</p>
+    {% endif %}
+
+    <div id="dashboard">
+        <div>
+            <button class="submit-button" type="button" id="run-all-btn">Run all</button>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Video Url</th>
+                    <th>Username</th>
+                    <th>Repeat no</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                <tbody id="item-table">
+                    {% for item in listofitems %}
+                        <tr>
+                            <td>{{ item["id"] }}</td>
+                            <td>{{ item["url"] }}</td>
+                            <td>{{ item["username"] }}</td>
+                            <td>{{ item["repeat"] }}</td>
+                            <td>
+                                {% if item["completed"] %}
+                                    <p>Done</p>
+                                {% else %}
+                                    <p style="color: grey;">Nan</p>
+                                {% endif %}
+                            </td>
+                            <td class="action-cell">
+                                <form class="delete-item-form" action="/delete" method="post">
+                                    <input type="hidden" name="id" value="{{ item['id'] }}">
+                                    <input class="submit-button" type="submit" value="Delete">
+                                </form>
+                                <form class="run-item-form" action="/run" method="post">
+                                    <input type="hidden" name="id" value="{{ item['id'] }}">
+                                    <input class="submit-button" type="submit" value="Run">
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Get the completion flag from Flask template
+        var alertMessage = {{ alertMessage | tojson }};
+        // Check if completion flag is true and show alert
+        if (alertMessage) {
+            alert(alertMessage); // You can customize the alert message
+        }
+
+        const repeat_no_input = document.getElementById("repeat_no");
+        repeat_no_input.onchange = (e) => {
+            if (repeat_no_input.value < 1) {
+                repeat_no_input.value = 1;
+            }
+        };
+
+        function updateStatus() {
+            fetch('/status')
+            .then(response => response.json())
+            .then(data => {
+                // Update the UI based on the received status data
+                const itemTable = document.getElementById('item-table');
+                itemTable.innerHTML = ''; // Clear existing rows
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.id}</td>
+                        <td>${item.url}</td>
+                        <td>${item.username}</td>
+                        <td>${item.repeat}</td>
+                        <td>${item.completed ? '<p>Done</p>' : '<p style="color: grey">Nan</p>'}</td>
+                        <td class="action-cell">
+                            <form class="delete-item-form" action="/delete" method="post">
+                                <input type="hidden" name="id" value="${item.id}">
+                                <input class="submit-btn" type="submit" value="Delete">
+                            </form>
+                            <form class="run-item-form" action="/run" method="post">
+                                <input type="hidden" name="id" value="${item.id}">
+                                <input class="submit-btn" type="submit" value="Run">
+                            </form>
+                        </td>
+                    `;
+                    itemTable.appendChild(row);
+                });
+            })
+            .catch(error => console.error('Error fetching status:', error));
+        }
+
+        // Call updateStatus() initially and then periodically
+        updateStatus();
+        setInterval(updateStatus, 2000);
+
+        document.getElementById("run-all-btn").onclick = (e) => {
+            e.preventDefault();
+            fetch('/run_all', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                // Optionally, update UI to indicate that run all process has been initiated
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
